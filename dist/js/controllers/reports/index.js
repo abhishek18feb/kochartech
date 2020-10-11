@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.genReport = exports.addFeedback = exports.addReport = void 0;
 const report_1 = __importDefault(require("../../models/report"));
 const feedback_1 = __importDefault(require("../../models/feedback"));
+const util_1 = require("../../util");
 const addReport = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const body = req.body;
@@ -43,68 +44,81 @@ const addFeedback = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
 });
 exports.addFeedback = addFeedback;
+const feedBackReport = (type) => __awaiter(void 0, void 0, void 0, function* () {
+    const feedBackReport = yield report_1.default.aggregate([{ $match: {
+                type: type
+            } },
+        {
+            $lookup: {
+                from: "feedbacks",
+                localField: "customerId",
+                foreignField: "customerId",
+                as: "report_docs"
+            }
+        },
+        {
+            $lookup: {
+                from: "customers",
+                localField: "customerId",
+                foreignField: "_id",
+                as: "customer_docs"
+            }
+        },
+        {
+            $replaceRoot: { newRoot: { $mergeObjects: [{ $arrayElemAt: ["$report_docs", 0] }, "$$ROOT"] } }
+        },
+        {
+            $replaceRoot: { newRoot: { $mergeObjects: [{ $arrayElemAt: ["$customer_docs", 0] }, "$$ROOT"] } }
+        },
+        { $project: { "name": 1, "userComment": 1, "rating": 1, "startDate": 1, } }
+    ]);
+    const result = feedBackReport.map((feedback) => ({
+        "CustomerName": feedback.name,
+        "UserComments": feedback.userComment,
+        "rating": feedback.rating,
+        "startDate": feedback.startDate
+    }));
+    return result;
+});
+const otherReports = (type) => __awaiter(void 0, void 0, void 0, function* () {
+    const allReports = yield report_1.default.find({ type: type })
+        .select('customerId agentId startDate endDate type callLog')
+        .populate({ path: 'customerId', select: 'name' })
+        .populate({ path: 'agentId', select: 'name' });
+    const ViewResult = allReports.map((feedback) => {
+        var _a, _b;
+        return {
+            CustomerName: (_a = feedback.customerId) === null || _a === void 0 ? void 0 : _a.name,
+            AgentName: (_b = feedback.agentId) === null || _b === void 0 ? void 0 : _b.name,
+            startDate: feedback.startDate,
+            endDate: feedback.endDate,
+            type: feedback.type,
+            callLog: feedback.callLog
+        };
+    });
+    return ViewResult;
+});
 const genReport = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    let ViewResult;
+    let result;
     try {
-        const feedBackReport = yield report_1.default.aggregate([{ $match: {
-                    type: req.params.type
-                } },
-            {
-                $lookup: {
-                    from: "feedbacks",
-                    localField: "customerId",
-                    foreignField: "customerId",
-                    as: "report_docs"
-                }
-            },
-            {
-                $lookup: {
-                    from: "customers",
-                    localField: "customerId",
-                    foreignField: "_id",
-                    as: "customer_docs"
-                }
-            },
-            {
-                $replaceRoot: { newRoot: { $mergeObjects: [{ $arrayElemAt: ["$report_docs", 0] }, "$$ROOT"] } }
-            },
-            {
-                $replaceRoot: { newRoot: { $mergeObjects: [{ $arrayElemAt: ["$customer_docs", 0] }, "$$ROOT"] } }
-            },
-            { $project: { "name": 1, "userComment": 1, "rating": 1, "startDate": 1, } }
-        ]);
-        const result = feedBackReport.map(feedback => ({
-            "Customer Name": feedback.name,
-            "UserComments": feedback.userComment,
-            "rating": feedback.rating,
-            "startDate": feedback.startDate
-        }));
-        console.log(feedBackReport);
-        const allReports = yield report_1.default.find({ type: req.params.type })
-            .select('customerId agentId startDate endDate type callLog')
-            .populate({ path: 'customerId', select: 'name' })
-            .populate({ path: 'agentId', select: 'name' });
-        const ViewResult = allReports.map((feedback) => {
-            var _a, _b;
-            return {
-                "Customer Name": (_a = feedback.customerId) === null || _a === void 0 ? void 0 : _a.name,
-                "Agent Name": (_b = feedback.agentId) === null || _b === void 0 ? void 0 : _b.name,
-                startDate: feedback.startDate,
-                endDate: feedback.endDate,
-                type: feedback.type,
-                callLog: feedback.callLog
-            };
-        });
-        res.status(200).json({
-            status_code: 200,
-            data: req.params.type == "4" ? result : ViewResult,
-            message: "Record fetched Successfully",
+        if (req.params.type > 4)
+            throw new Error("Invalid Type");
+        if (req.params.type == "4") {
+            result = yield feedBackReport(req.params.type);
+        }
+        else {
+            ViewResult = yield otherReports(req.params.type);
+        }
+        return util_1.successReponse(res, {
+            result: req.params.type == "4" ? result : ViewResult,
+            message: "Record fetched Successfully"
         });
     }
     catch (error) {
-        return res.status(500).json({
+        return util_1.errorReponse(res, {
             status_code: 400,
-            message: "Something went wrong",
-            errors: error.message
+            message: error.message
         });
     }
 });
