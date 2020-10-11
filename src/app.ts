@@ -1,7 +1,7 @@
 import express, { Express } from 'express'
 import mongoose from 'mongoose'
 import cors from 'cors'
-import todoRoutes from './routes';
+import reportRoutes from './routes';
 import userRoutes from './routes/user';
 import agentRoutes from './routes/agent';
 import * as bodyParser from 'body-parser';
@@ -12,7 +12,7 @@ const PORT: string | number = process.env.PORT || 4000
 
 app.use(bodyParser.json());
 app.use(cors())
-app.use(todoRoutes)
+app.use(reportRoutes)
 app.use(userRoutes)
 app.use(agentRoutes)
 

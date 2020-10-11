@@ -83,6 +83,7 @@ const otherReports = async (type) => {
             .select('customerId agentId startDate endDate type callLog')
             .populate({path:'customerId', select:'name'})
             .populate({path:'agentId', select:'name'});
+    
     const ViewResult = allReports.map((feedback:any) => {
         return {
             CustomerName:feedback.customerId?.name,
@@ -93,7 +94,7 @@ const otherReports = async (type) => {
             callLog:feedback.callLog
         }
     })
-    return ViewResult;
+    return ViewResult; 
 }
 
 const genReport = async (req: Request, res: Response) => {
