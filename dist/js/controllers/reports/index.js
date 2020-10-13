@@ -65,19 +65,46 @@ const feedBackReport = (type) => __awaiter(void 0, void 0, void 0, function* () 
             }
         },
         {
+            $lookup: {
+                from: "agents",
+                localField: "agentId",
+                foreignField: "_id",
+                as: "agents_docs"
+            }
+        },
+        {
             $replaceRoot: { newRoot: { $mergeObjects: [{ $arrayElemAt: ["$report_docs", 0] }, "$$ROOT"] } }
         },
         {
             $replaceRoot: { newRoot: { $mergeObjects: [{ $arrayElemAt: ["$customer_docs", 0] }, "$$ROOT"] } }
         },
-        { $project: { "name": 1, "userComment": 1, "rating": 1, "startDate": 1, } }
+        {
+            $unwind: "$agents_docs"
+        },
+        { $project: { "name": 1, "agents_docs.name": 1, "userComment": 1, "rating": 1, "startDate": 1, "endDate": 1, "type": 1, "callLog": 1 } }
     ]);
-    const result = feedBackReport.map((feedback) => ({
-        "CustomerName": feedback.name,
-        "UserComments": feedback.userComment,
-        "rating": feedback.rating,
-        "startDate": feedback.startDate
-    }));
+    let result = [];
+    if (type == 4) {
+        result = feedBackReport.map((feedback) => ({
+            "CustomerName": feedback.name,
+            "UserComments": feedback.userComment,
+            "rating": feedback.rating,
+            "startDate": feedback.startDate
+        }));
+    }
+    else {
+        result = feedBackReport.map((feedback) => {
+            var _a;
+            return ({
+                "CustomerName": feedback.name,
+                "AgentName": (_a = feedback.agents_docs) === null || _a === void 0 ? void 0 : _a.name,
+                "startDate": feedback.startDate,
+                "endDate": feedback.endDate,
+                "type": feedback.type,
+                "callLog": feedback.callLog
+            });
+        });
+    }
     return result;
 });
 const otherReports = (type) => __awaiter(void 0, void 0, void 0, function* () {
@@ -102,13 +129,15 @@ const genReport = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     let ViewResult;
     let result;
     try {
-        if (req.params.type > 4)
-            throw new Error("Invalid Type");
+        // if(req.params.type > 4) throw new Error("Invalid Type");
+        if (isNaN(req.params.type) || (parseInt(req.params.type) < 1 && parseInt(req.params.type) > 4))
+            throw new Error('Not a valid type');
         if (req.params.type == "4") {
             result = yield feedBackReport(req.params.type);
         }
         else {
-            ViewResult = yield otherReports(req.params.type);
+            // ViewResult = await otherReports(req.params.type)
+            ViewResult = yield feedBackReport(req.params.type);
         }
         return util_1.successReponse(res, {
             result: req.params.type == "4" ? result : ViewResult,

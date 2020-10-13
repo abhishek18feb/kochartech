@@ -61,20 +61,45 @@ const feedBackReport = async (type) => {
                   }
              },
              {
+                $lookup:
+                  {
+                    from: "agents",
+                    localField: "agentId",
+                    foreignField: "_id",
+                    as: "agents_docs"
+                  }
+             },
+             {
                 $replaceRoot: { newRoot: { $mergeObjects: [ { $arrayElemAt: [ "$report_docs", 0 ] }, "$$ROOT" ] } }
              },
              {
                 $replaceRoot: { newRoot: { $mergeObjects: [ { $arrayElemAt: [ "$customer_docs", 0 ] }, "$$ROOT" ] } }
              },
-             { $project: { "name": 1, "userComment": 1,  "rating": 1, "startDate": 1,} }
+             {
+                $unwind:"$agents_docs"
+             },
+             { $project: { "name": 1, "agents_docs.name":1,"userComment": 1,  "rating": 1, "startDate": 1,"endDate":1, "type":1, "callLog":1} }
         ]
     )
-    const result = feedBackReport.map((feedback:any)=>({
-        "CustomerName":feedback.name,
-        "UserComments":feedback.userComment,
-        "rating":feedback.rating,
-        "startDate":feedback.startDate
-    }));
+    
+    let result = [];
+    if(type==4){
+        result = feedBackReport.map((feedback:any)=>({
+                "CustomerName":feedback.name,
+                "UserComments":feedback.userComment,
+                "rating":feedback.rating,
+                "startDate":feedback.startDate
+            }));
+    }else{
+        result = feedBackReport.map((feedback:any)=>({
+            "CustomerName":feedback.name,
+            "AgentName":feedback.agents_docs?.name,
+            "startDate":feedback.startDate,
+            "endDate":feedback.endDate,
+            "type":feedback.type,
+            "callLog":feedback.callLog
+        }));
+    }
     return result;
 }
 
@@ -101,11 +126,13 @@ const genReport = async (req: Request, res: Response) => {
     let ViewResult:IViewReport[];
     let result:IFeedbackReport[];
     try{
-        if(req.params.type > 4) throw new Error("Invalid Type");
+        // if(req.params.type > 4) throw new Error("Invalid Type");
+        if(isNaN(req.params.type) || (parseInt(req.params.type)<1 && parseInt(req.params.type)>4)) throw new Error('Not a valid type');
         if(req.params.type == "4"){
             result = await feedBackReport(req.params.type);
         } else {
-            ViewResult = await otherReports(req.params.type)
+            // ViewResult = await otherReports(req.params.type)
+            ViewResult = await feedBackReport(req.params.type);
         }
 
         return successReponse(res, {
