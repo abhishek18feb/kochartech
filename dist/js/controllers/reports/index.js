@@ -45,7 +45,7 @@ const addFeedback = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.addFeedback = addFeedback;
 const feedBackReport = (type) => __awaiter(void 0, void 0, void 0, function* () {
-    const feedBackReport = yield report_1.default.aggregate([{ $match: {
+    const pipeline = [{ $match: {
                 type: type
             } },
         {
@@ -53,7 +53,7 @@ const feedBackReport = (type) => __awaiter(void 0, void 0, void 0, function* () 
                 from: "feedbacks",
                 localField: "customerId",
                 foreignField: "customerId",
-                as: "report_docs"
+                as: "feedback_docs"
             }
         },
         {
@@ -73,58 +73,41 @@ const feedBackReport = (type) => __awaiter(void 0, void 0, void 0, function* () 
             }
         },
         {
-            $replaceRoot: { newRoot: { $mergeObjects: [{ $arrayElemAt: ["$report_docs", 0] }, "$$ROOT"] } }
+            $replaceRoot: { newRoot: { $mergeObjects: [{ $arrayElemAt: ["$feedback_docs", 0] }, "$$ROOT"] } }
         },
         {
             $replaceRoot: { newRoot: { $mergeObjects: [{ $arrayElemAt: ["$customer_docs", 0] }, "$$ROOT"] } }
         },
         {
-            $unwind: "$agents_docs"
-        },
-        { $project: { "name": 1, "agents_docs.name": 1, "userComment": 1, "rating": 1, "startDate": 1, "endDate": 1, "type": 1, "callLog": 1 } }
-    ]);
-    let result = [];
+            $addFields: { CustomerName: "$name", AgentName: { $arrayElemAt: ["$agents_docs.name", 0] } }
+        }
+    ];
     if (type == 4) {
-        result = feedBackReport.map((feedback) => ({
-            "CustomerName": feedback.name,
-            "UserComments": feedback.userComment,
-            "rating": feedback.rating,
-            "startDate": feedback.startDate
-        }));
+        pipeline.push({ $project: { "CustomerName": 1, "userComment": 1, "rating": 1, "startDate": 1 } });
     }
     else {
-        result = feedBackReport.map((feedback) => {
-            var _a;
-            return ({
-                "CustomerName": feedback.name,
-                "AgentName": (_a = feedback.agents_docs) === null || _a === void 0 ? void 0 : _a.name,
-                "startDate": feedback.startDate,
-                "endDate": feedback.endDate,
-                "type": feedback.type,
-                "callLog": feedback.callLog
-            });
-        });
+        pipeline.push({ $project: { "CustomerName": 1, "AgentName": 1, "startDate": 1, "endDate": 1, "type": 1, "callLog": 1 } });
     }
-    return result;
+    const feedBackReport = yield report_1.default.aggregate(pipeline);
+    return feedBackReport;
 });
-const otherReports = (type) => __awaiter(void 0, void 0, void 0, function* () {
-    const allReports = yield report_1.default.find({ type: type })
-        .select('customerId agentId startDate endDate type callLog')
-        .populate({ path: 'customerId', select: 'name' })
-        .populate({ path: 'agentId', select: 'name' });
-    const ViewResult = allReports.map((feedback) => {
-        var _a, _b;
-        return {
-            CustomerName: (_a = feedback.customerId) === null || _a === void 0 ? void 0 : _a.name,
-            AgentName: (_b = feedback.agentId) === null || _b === void 0 ? void 0 : _b.name,
-            startDate: feedback.startDate,
-            endDate: feedback.endDate,
-            type: feedback.type,
-            callLog: feedback.callLog
-        };
-    });
-    return ViewResult;
-});
+// const otherReports = async (type) => {
+//     const allReports = await Report.find({type:type})
+//             .select('customerId agentId startDate endDate type callLog')
+//             .populate({path:'customerId', select:'name'})
+//             .populate({path:'agentId', select:'name'});
+//     const ViewResult = allReports.map((feedback:any) => {
+//         return {
+//             CustomerName:feedback.customerId?.name,
+//             AgentName:feedback.agentId?.name,
+//             startDate:feedback.startDate,
+//             endDate:feedback.endDate,
+//             type:feedback.type,
+//             callLog:feedback.callLog
+//         }
+//     })
+//     return ViewResult; 
+// }
 const genReport = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     let ViewResult;
     let result;

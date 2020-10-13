@@ -18,7 +18,7 @@ app.use(agentRoutes)
 
 const uri: string = `mongodb://localhost/kochartech`
 const options = { useNewUrlParser: true, useUnifiedTopology: true }
-mongoose.set('useFindAndModify', false)
+// mongoose.set('useFindAndModify', false)
 
 mongoose
     .connect(uri, options)

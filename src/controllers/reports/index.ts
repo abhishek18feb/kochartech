@@ -38,89 +38,77 @@ const addFeedback = async (req: Request, res: Response): Promise<void> => {
     }
 }
 const feedBackReport = async (type) => {
-    const feedBackReport = await Report.aggregate(
-        [   { $match: {
-                type: type
-            } },
-            {
-                $lookup:
-                  {
-                    from: "feedbacks",
-                    localField: "customerId",
-                    foreignField: "customerId",
-                    as: "report_docs"
-                  }
-             },
-             {
-                $lookup:
-                  {
-                    from: "customers",
-                    localField: "customerId",
-                    foreignField: "_id",
-                    as: "customer_docs"
-                  }
-             },
-             {
-                $lookup:
-                  {
-                    from: "agents",
-                    localField: "agentId",
-                    foreignField: "_id",
-                    as: "agents_docs"
-                  }
-             },
-             {
-                $replaceRoot: { newRoot: { $mergeObjects: [ { $arrayElemAt: [ "$report_docs", 0 ] }, "$$ROOT" ] } }
-             },
-             {
-                $replaceRoot: { newRoot: { $mergeObjects: [ { $arrayElemAt: [ "$customer_docs", 0 ] }, "$$ROOT" ] } }
-             },
-             {
-                $unwind:"$agents_docs"
-             },
-             { $project: { "name": 1, "agents_docs.name":1,"userComment": 1,  "rating": 1, "startDate": 1,"endDate":1, "type":1, "callLog":1} }
-        ]
-    )
+    const pipeline:any = [{ $match: {
+                    type: type
+                } },
+                {
+                    $lookup:
+                    {
+                        from: "feedbacks",
+                        localField: "customerId",
+                        foreignField: "customerId",
+                        as: "feedback_docs"
+                    }
+                },
+                {
+                    $lookup:
+                    {
+                        from: "customers",
+                        localField: "customerId",
+                        foreignField: "_id",
+                        as: "customer_docs"
+                    }
+                },
+                {
+                    $lookup:
+                    {
+                        from: "agents",
+                        localField: "agentId",
+                        foreignField: "_id",
+                        as: "agents_docs"
+                    }
+                },
+                {
+                    $replaceRoot: { newRoot: { $mergeObjects: [ { $arrayElemAt: [ "$feedback_docs", 0 ] }, "$$ROOT" ] } }
+                },
+                {
+                    $replaceRoot: { newRoot: { $mergeObjects: [ { $arrayElemAt: [ "$customer_docs", 0 ] }, "$$ROOT" ] } }
+                },
+                
+                {
+                    $addFields: { CustomerName:"$name", AgentName: { $arrayElemAt: [ "$agents_docs.name", 0 ] } }
+                }
+    ];
+
+      if (type==4){
+          pipeline.push({ $project: { "CustomerName": 1,"userComment": 1,  "rating": 1, "startDate": 1} })
+      }else {
+        pipeline.push({ $project: { "CustomerName": 1, "AgentName":1, "startDate": 1,"endDate":1, "type":1, "callLog":1} })
+      }
+    const feedBackReport = await Report.aggregate(pipeline)
     
-    let result = [];
-    if(type==4){
-        result = feedBackReport.map((feedback:any)=>({
-                "CustomerName":feedback.name,
-                "UserComments":feedback.userComment,
-                "rating":feedback.rating,
-                "startDate":feedback.startDate
-            }));
-    }else{
-        result = feedBackReport.map((feedback:any)=>({
-            "CustomerName":feedback.name,
-            "AgentName":feedback.agents_docs?.name,
-            "startDate":feedback.startDate,
-            "endDate":feedback.endDate,
-            "type":feedback.type,
-            "callLog":feedback.callLog
-        }));
-    }
-    return result;
+    
+    return feedBackReport;
 }
 
-const otherReports = async (type) => {
-    const allReports = await Report.find({type:type})
-            .select('customerId agentId startDate endDate type callLog')
-            .populate({path:'customerId', select:'name'})
-            .populate({path:'agentId', select:'name'});
+// const otherReports = async (type) => {
+//     const allReports = await Report.find({type:type})
+//             .select('customerId agentId startDate endDate type callLog')
+//             .populate({path:'customerId', select:'name'})
+//             .populate({path:'agentId', select:'name'});
     
-    const ViewResult = allReports.map((feedback:any) => {
-        return {
-            CustomerName:feedback.customerId?.name,
-            AgentName:feedback.agentId?.name,
-            startDate:feedback.startDate,
-            endDate:feedback.endDate,
-            type:feedback.type,
-            callLog:feedback.callLog
-        }
-    })
-    return ViewResult; 
-}
+//     const ViewResult = allReports.map((feedback:any) => {
+//         return {
+//             CustomerName:feedback.customerId?.name,
+//             AgentName:feedback.agentId?.name,
+//             startDate:feedback.startDate,
+//             endDate:feedback.endDate,
+//             type:feedback.type,
+//             callLog:feedback.callLog
+//         }
+//     })
+//     return ViewResult; 
+// }
 
 const genReport = async (req: Request, res: Response) => {
     let ViewResult:IViewReport[];
