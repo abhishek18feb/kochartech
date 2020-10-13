@@ -14,36 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.genReport = exports.addFeedback = exports.addReport = void 0;
 const report_1 = __importDefault(require("../../models/report"));
-const feedback_1 = __importDefault(require("../../models/feedback"));
 const util_1 = require("../../util");
-const addReport = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const body = req.body;
-        console.log('request body', req.body);
-        const report = new report_1.default(Object.assign({}, body));
-        const newReport = yield report.save();
-        const allReports = yield report_1.default.find();
-        res.status(201).json({ message: 'Report added', report: newReport, reports: allReports });
-    }
-    catch (error) {
-        throw error;
-    }
-});
-exports.addReport = addReport;
-const addFeedback = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const body = req.body;
-        console.log('request body', req.body);
-        const feedback = new feedback_1.default(Object.assign({}, body));
-        const newFeedBack = yield feedback.save();
-        const allFeedBack = yield feedback_1.default.find();
-        res.status(201).json({ message: 'FeedBack added', feedback: newFeedBack, feedbacks: allFeedBack });
-    }
-    catch (error) {
-        throw error;
-    }
-});
-exports.addFeedback = addFeedback;
 const feedBackReport = (type) => __awaiter(void 0, void 0, void 0, function* () {
     const pipeline = [{ $match: {
                 type: type
@@ -91,35 +62,16 @@ const feedBackReport = (type) => __awaiter(void 0, void 0, void 0, function* () 
     const feedBackReport = yield report_1.default.aggregate(pipeline);
     return feedBackReport;
 });
-// const otherReports = async (type) => {
-//     const allReports = await Report.find({type:type})
-//             .select('customerId agentId startDate endDate type callLog')
-//             .populate({path:'customerId', select:'name'})
-//             .populate({path:'agentId', select:'name'});
-//     const ViewResult = allReports.map((feedback:any) => {
-//         return {
-//             CustomerName:feedback.customerId?.name,
-//             AgentName:feedback.agentId?.name,
-//             startDate:feedback.startDate,
-//             endDate:feedback.endDate,
-//             type:feedback.type,
-//             callLog:feedback.callLog
-//         }
-//     })
-//     return ViewResult; 
-// }
 const genReport = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     let ViewResult;
     let result;
     try {
-        // if(req.params.type > 4) throw new Error("Invalid Type");
         if (isNaN(req.params.type) || (parseInt(req.params.type) < 1 && parseInt(req.params.type) > 4))
             throw new Error('Not a valid type');
         if (req.params.type == "4") {
             result = yield feedBackReport(req.params.type);
         }
         else {
-            // ViewResult = await otherReports(req.params.type)
             ViewResult = yield feedBackReport(req.params.type);
         }
         return util_1.successReponse(res, {

@@ -8,35 +8,6 @@ import {IFeedbackReport} from '../../types/feedbackReport';
 import {successReponse, errorReponse} from '../../util';
 
 
-const addReport = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const body = req.body as Pick<IReport, 'customerId' | 'agentId' | 'startDate' | 'endDate' | 'callLog' | 'type'>
-        console.log('request body', req.body);
-        const report: IReport = new Report({...body}) 
-
-        const newReport: IReport = await report.save()
-        const allReports: IReport[] = await Report.find()
-
-        res.status(201).json({ message: 'Report added', report: newReport, reports: allReports })
-    } catch (error) {
-        throw error
-    }
-}
-
-const addFeedback = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const body = req.body as Pick<IFeedback, 'rating' | 'customerId' | 'userComment'>
-        console.log('request body', req.body);
-        const feedback: IFeedback = new Feedback({...body}) 
-
-        const newFeedBack: IFeedback = await feedback.save()
-        const allFeedBack: IFeedback[] = await Feedback.find()
-
-        res.status(201).json({ message: 'FeedBack added', feedback: newFeedBack, feedbacks: allFeedBack })
-    } catch (error) {
-        throw error
-    }
-}
 const feedBackReport = async (type) => {
     const pipeline:any = [{ $match: {
                     type: type
@@ -91,35 +62,16 @@ const feedBackReport = async (type) => {
     return feedBackReport;
 }
 
-// const otherReports = async (type) => {
-//     const allReports = await Report.find({type:type})
-//             .select('customerId agentId startDate endDate type callLog')
-//             .populate({path:'customerId', select:'name'})
-//             .populate({path:'agentId', select:'name'});
-    
-//     const ViewResult = allReports.map((feedback:any) => {
-//         return {
-//             CustomerName:feedback.customerId?.name,
-//             AgentName:feedback.agentId?.name,
-//             startDate:feedback.startDate,
-//             endDate:feedback.endDate,
-//             type:feedback.type,
-//             callLog:feedback.callLog
-//         }
-//     })
-//     return ViewResult; 
-// }
+
 
 const genReport = async (req: Request, res: Response) => {
     let ViewResult:IViewReport[];
     let result:IFeedbackReport[];
     try{
-        // if(req.params.type > 4) throw new Error("Invalid Type");
         if(isNaN(req.params.type) || (parseInt(req.params.type)<1 && parseInt(req.params.type)>4)) throw new Error('Not a valid type');
         if(req.params.type == "4"){
             result = await feedBackReport(req.params.type);
         } else {
-            // ViewResult = await otherReports(req.params.type)
             ViewResult = await feedBackReport(req.params.type);
         }
 
