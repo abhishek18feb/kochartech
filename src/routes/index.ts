@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { addReport, addFeedback, genReport } from '../controllers/reports';
+import { genReport } from '../controllers/reports';
  
 const router: Router = Router()
 
