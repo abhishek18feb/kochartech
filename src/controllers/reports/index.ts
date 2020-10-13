@@ -88,4 +88,4 @@ const genReport = async (req: Request, res: Response) => {
 }
 
 
-export { addReport, addFeedback, genReport }
+export { genReport }
